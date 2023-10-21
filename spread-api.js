@@ -102,7 +102,7 @@ function handleRequest(params) {
     case "POST":
       return handlePost(sheet, payload);
     case "PUT":
-      return handlePut(sheet, _id, payload);
+      return handlePut(sheet, payload);
     case "DELETE":
       return handleDelete(sheet, _id);
     default:
@@ -181,19 +181,38 @@ function handlePost(sheet, payload) {
   return data(201);
 }
 
-function handlePut(sheet, _id, payload) {
-  if (_id == null) {
-    return error(400, "row_id_missing", {});
+/***
+ * Update one or more rows
+ * @param {Sheet} sheet - A Google Sheet object
+ * @param {Object | [Object]} payload - Don't forget the _id key
+ * @returns {{data, status}}
+ */
+function handlePut(sheet, payload) {
+  let payloadArray;
+  if(!Array.isArray(payload)) {
+    payloadArray = [payload];
+  } else {
+    payloadArray = payload
+  }
+
+  // Check for missing _id
+  for(const [idx, p] of payloadArray.entries()) {
+    if(p._id==null) {
+      return error(400, "row_id_missing", {index: idx});
+    }
   }
 
   const headers = getHeaders(sheet);
-  for (const [key, value] of Object.entries(payload)) {
-    const idx = headers.findIndex(h => h===key);
-    if(idx===-1) continue;
+  for(const p of payloadArray) {
+    const _id = p._id;
+    for (const [key, value] of Object.entries(p)) {
+      const idx = headers.findIndex(h => h===key);
+      if(idx===-1) continue;
 
-    sheet.getRange(_id, idx+1, 1).setValue(value);  
+      sheet.getRange(_id, idx+1, 1).setValue(value);
+    }
   }
-  
+
   return data(201);
 }
 
@@ -311,13 +330,13 @@ function getPermissions(user, spreadsheet) {
   if (typeof user.permissions === "function") return user.permissions;
 
   const keys = Object.keys(user.permissions);
-  
+
   for(var i = 0; i < keys.length; i++) {
     if(keys[i].toLowerCase() === spreadsheet.toLowerCase()) {
       return user.permissions[keys[i]];
     }
   }
-  
+
   return user.permissions["ALL"];
 }
 
