@@ -102,7 +102,9 @@ function handleRequest(params) {
     case "POST":
       return handlePost(sheet, payload);
     case "PUT":
-      return handlePut(sheet, payload);
+      return _id != null
+          ? handlePutWithId(sheet, _id, payload)
+          : handlePut(sheet, payload);
     case "DELETE":
       return handleDelete(sheet, _id);
     default:
@@ -178,6 +180,22 @@ function handleGetMultipleRows(sheet, params) {
 function handlePost(sheet, payload) {
   const row = mapObjectToRow(payload, getHeaders(sheet));
   sheet.appendRow(row);
+  return data(201);
+}
+
+function handlePutWithId(sheet, _id, payload) {
+  if (_id == null) {
+    return error(400, "row_id_missing", {});
+  }
+
+  const headers = getHeaders(sheet);
+  for (const [key, value] of Object.entries(payload)) {
+    const idx = headers.findIndex(h => h===key);
+    if(idx===-1) continue;
+
+    sheet.getRange(_id, idx+1, 1).setValue(value);
+  }
+
   return data(201);
 }
 
